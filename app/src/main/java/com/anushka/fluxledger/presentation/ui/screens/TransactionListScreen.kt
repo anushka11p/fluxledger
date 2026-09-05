@@ -20,6 +20,13 @@ import android.content.Intent
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.platform.LocalContext
 import com.anushka.fluxledger.presentation.ui.dashboard.DashboardActivity
+import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.style.TextOverflow
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,36 +89,73 @@ fun TransactionItem(
     transaction: Transaction,
     onDelete: () -> Unit
 ) {
+    val homeFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
+    val dateFormat = remember { SimpleDateFormat("d MMM", Locale.getDefault()) }
+
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${transaction.amount} ${transaction.currency}  →  ${"%.2f".format(transaction.baseAmount)} base",
+                    text = transaction.category,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = transaction.category,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = buildString {
+                        append(dateFormat.format(Date(transaction.date)))
+                        if (!transaction.note.isNullOrBlank()) {
+                            append(" · ")
+                            append(transaction.note)
+                        }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (!transaction.note.isNullOrBlank()) {
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = formatAmount(transaction.amount, transaction.currency),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (transaction.currency != "INR") {
                     Text(
-                        text = transaction.note,
-                        style = MaterialTheme.typography.bodySmall
+                        text = homeFormat.format(transaction.baseAmount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
+}
+
+private fun formatAmount(amount: Double, currency: String): String {
+    val symbol = when (currency) {
+        "INR" -> "₹"
+        "USD" -> "$"
+        "EUR" -> "€"
+        "GBP" -> "£"
+        else -> "$currency "
+    }
+    return symbol + String.format(Locale.US, "%,.2f", amount)
 }
