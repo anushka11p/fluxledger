@@ -7,6 +7,11 @@ plugins {
 }
 
 android {
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     namespace = "com.anushka.fluxledger"
     compileSdk = 35
 
