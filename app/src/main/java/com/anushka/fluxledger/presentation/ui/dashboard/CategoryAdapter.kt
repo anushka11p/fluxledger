@@ -25,10 +25,12 @@ class CategoryAdapter : ListAdapter<CategoryTotal, CategoryAdapter.ViewHolder>(D
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         val format = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+        val percent = (item.share * 100).toInt()
 
         holder.binding.categoryName.text = item.category
         holder.binding.categoryAmount.text = format.format(item.total)
-        holder.binding.categoryBar.progress = (item.share * 100).toInt()
+        holder.binding.categoryShare.text = "$percent% of this month"
+        holder.binding.categoryBar.setProgressCompat(percent, true)
     }
 
     companion object {

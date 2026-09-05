@@ -26,6 +26,7 @@ class DashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
         binding.categoryList.layoutManager = LinearLayoutManager(this)
         binding.categoryList.adapter = adapter
@@ -37,8 +38,14 @@ class DashboardActivity : AppCompatActivity() {
                 viewModel.summary.collect { summary ->
                     binding.monthTotal.text = format.format(summary.monthTotal)
                     adapter.submitList(summary.categories)
-
                     val isEmpty = summary.categories.isEmpty()
+                    binding.transactionCount.text = when (summary.categories.size) {
+                        0 -> "nothing recorded yet"
+                        1 -> "across 1 category"
+                        else -> "across ${summary.categories.size} categories"
+                    }
+                    binding.breakdownHeader.visibility = if (isEmpty) View.GONE else View.VISIBLE
+
                     binding.categoryList.visibility = if (isEmpty) View.GONE else View.VISIBLE
                     binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 }
