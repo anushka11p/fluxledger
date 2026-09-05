@@ -14,6 +14,8 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY date DESC")
     fun getAll(): Flow<List<TransactionEntity>>
 
+    @Query("SELECT * FROM transactions WHERE date >= :startDate ORDER BY date DESC")
+    fun getSince(startDate: Long): Flow<List<TransactionEntity>>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(transaction: TransactionEntity)
 

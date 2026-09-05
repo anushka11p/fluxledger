@@ -14,8 +14,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FluxLedger">
         <activity
-            android:name=".MainActivity"
-            android:exported="true"
+            android:name=".presentation.ui.dashboard.DashboardActivity"
+            android:exported="false"
             android:label="@string/app_name"
             android:theme="@style/Theme.FluxLedger"
             android:windowSoftInputMode="adjustResize">

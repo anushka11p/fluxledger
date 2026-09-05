@@ -16,6 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.anushka.fluxledger.domain.model.Transaction
 import com.anushka.fluxledger.presentation.viewmodel.TransactionListViewModel
+import android.content.Intent
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.platform.LocalContext
+import com.anushka.fluxledger.presentation.ui.dashboard.DashboardActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,11 +28,19 @@ fun TransactionListScreen(
     viewModel: TransactionListViewModel = hiltViewModel()
 ) {
     val transactions by viewModel.transactions.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("FluxLedger") }
+                title = { Text("FluxLedger") },
+                actions = {
+                    IconButton(onClick = {
+                        context.startActivity(Intent(context, DashboardActivity::class.java))
+                    }) {
+                        Icon(Icons.Default.Info, contentDescription = "Dashboard")
+                    }
+                }
             )
         },
         floatingActionButton = {
