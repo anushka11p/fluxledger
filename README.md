@@ -1,8 +1,10 @@
 # FluxLedger
 
-**Offline-first Multi-Currency Expense Tracker**
+**Offline-first multi-currency expense tracker for Android**
 
-A modern Android application built with Clean Architecture, MVVM, Jetpack Compose, Room, Hilt, and Coroutines. Designed as a production-style portfolio project focused on clean code, offline-first behaviour, and real-world architecture.
+Log expenses in any of four currencies and see them converted to your home currency using live ECB exchange rates. Rates are cached locally, so conversion keeps working with no network at all.
+
+Built as a portfolio project to practise Clean Architecture, offline-first data flow, and both of Android's UI toolkits.
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose&logoColor=white)
@@ -11,16 +13,22 @@ A modern Android application built with Clean Architecture, MVVM, Jetpack Compos
 
 ---
 
+## Screenshots
+
+| Transactions | Add / Edit | Dashboard |
+|---|---|---|
+| ![Transaction list](screenshots/list.png) | ![Add transaction](screenshots/add.png) | ![Dashboard](screenshots/dashboard.png) |
+
+---
+
 ## Features
 
-- Add, view, and delete transactions
-- Multi-currency support (INR, USD, EUR, GBP)
-- Offline-first architecture using Room as the single source of truth
-- Clean Architecture + MVVM
-- Jetpack Compose + Material 3 UI
-- Hilt for dependency injection
-- Kotlin Coroutines + Flow
-- Simple and clean navigation
+- Add, edit, and delete transactions with amount, currency, category, note, and date
+- Live exchange rates from the [Frankfurter API](https://frankfurter.dev) (European Central Bank data, no API key)
+- Automatic conversion to a home currency, with rates cached in Room so conversion works offline
+- Monthly dashboard showing total spend and a per-category breakdown
+- Material 3 throughout, with light and dark theme support
+- Fully functional with no network connection after the first successful rate fetch
 
 ---
 
@@ -30,53 +38,89 @@ A modern Android application built with Clean Architecture, MVVM, Jetpack Compos
 |---|---|
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
+| UI (dashboard) | XML layouts + ViewBinding + RecyclerView |
 | Architecture | Clean Architecture + MVVM |
-| Local Database | Room + Flow |
-| Dependency Injection | Hilt |
+| Local database | Room + Flow |
+| Networking | Retrofit + OkHttp + Moshi |
+| Dependency injection | Hilt |
 | Asynchronous | Coroutines + StateFlow |
 | Navigation | Navigation Compose |
+| Testing | JUnit, Turbine, Truth |
+
+The dashboard is deliberately built with XML layouts and ViewBinding rather than Compose. Most production Android codebases still run on the View system, so the project covers both toolkits rather than only the newer one.
 
 ---
 
 ## Architecture
 
-The project follows Clean Architecture with a clear separation of concerns:
-
 ```
-Presentation  →  ViewModels + Compose Screens
+Presentation  →  ViewModels + Compose screens + one XML/ViewBinding screen
       ↓
-Domain        →  UseCases + Repository Interfaces + Models
+Domain        →  UseCases + repository interfaces + models
       ↓
-Data          →  Repository Implementations + Room + Mappers
+Data          →  Repository implementations + Room + Retrofit + mappers
 ```
 
-- **Single source of truth:** the Room database
-- **Unidirectional data flow** using `StateFlow`
-- **Dependency injection** with Hilt
-- **UseCases** hold the business logic and keep ViewModels thin
+- **Single source of truth:** the Room database. The UI never reads from the network directly.
+- **Unidirectional data flow** using `StateFlow`, collected with `collectAsState` in Compose and `repeatOnLifecycle` in the View-based screen.
+- **The domain layer has no Android dependencies**, which makes use cases testable on the JVM without an emulator.
+- **Dependency injection** with Hilt, wired through modules for the database, network, and repositories.
+
+### Offline-first rate handling
+
+`RateRepositoryImpl` is the core of the offline story:
+
+1. A single API call fetches EUR-based rates for around 30 currencies.
+2. Every rate is written to a Room table, so the cache survives process death.
+3. Cached rates are reused for six hours before refetching.
+4. If the network call fails, the repository falls back to cached rates **regardless of age** — a rate that is a few hours stale is far more useful than no conversion at all.
+
+Conversion between arbitrary pairs is done as a cross-rate through EUR, so one fetch covers every currency combination rather than one request per pair.
+
+### Frozen conversion rates
+
+`baseAmount` is calculated once when a transaction is saved and then stored. Reading a transaction never recalculates it. A receipt shouldn't change value retroactively because the market moved.
+
+Editing follows the same principle: the rate is only recalculated when the amount or currency changes. Fixing a typo in a note leaves the converted value untouched.
 
 ---
 
-## Project Structure
+## Design notes
 
-```
-com.anushka.fluxledger
-├── data
-│   ├── local               # Room Entity, DAO, Database
-│   ├── repository          # Repository implementations
-│   └── mapper
-├── domain
-│   ├── model
-│   ├── repository          # Repository interfaces
-│   └── usecase
-├── presentation
-│   ├── ui
-│   │   ├── screens
-│   │   ├── components
-│   │   └── theme
-│   └── viewmodel
-└── di                      # Hilt modules
-```
+The app uses Material 3 design tokens rather than hardcoded values, in both toolkits:
+
+- **Colour** comes from the theme's colour roles (`colorPrimaryContainer`, `colorSurfaceContainerLow`, `colorOnSurfaceVariant`) rather than hex literals, so light and dark themes work without a second set of definitions.
+- **Typography** uses the Material type scale (`textAppearanceTitleMedium`, `textAppearanceDisplaySmall`) rather than raw `sp` values.
+- The XML screen uses `?attr/` references to reach the same tokens Compose reads from `MaterialTheme`.
+
+A few interaction decisions worth calling out:
+
+- The transaction row leads with **category** rather than amount, because scanning a list of expenses is usually a question of "what did I spend on" before "how much."
+- The converted amount is **hidden when the currency matches the home currency**, since showing `₹50.00` twice on the same row is noise.
+- The save button disables itself while a write is in flight, and the screen waits for the write to complete before navigating back. An earlier version navigated immediately, which cancelled the coroutine mid-write and silently dropped transactions.
+
+---
+
+## Testing
+
+12 unit tests covering the domain and data layers, run with `./gradlew testDebugUnitTest`.
+
+The rate conversion tests use fake implementations of the API and DAO to cover:
+
+- Cross-rate conversion between two non-base currencies
+- The same-currency short circuit (no network call at all)
+- Persistence of every fetched rate
+- Fallback to cached rates when the network fails
+- Behaviour when offline with an empty cache
+- Cache reuse within the TTL window
+
+---
+
+## Known limitations
+
+- **A transaction saved offline before any successful rate fetch is stored at a 1:1 rate**, and that value is frozen. This affects a user whose very first action happens with no network. Storing `baseAmount` as nullable and converting lazily on the first successful fetch would fix it.
+- The home currency is hardcoded to INR. A settings screen backed by DataStore is the natural next step.
+- Frankfurter provides around 30 currencies; the picker exposes four.
 
 ---
 
@@ -90,38 +134,28 @@ com.anushka.fluxledger
 
 ### Run the project
 
-1. Clone the repository:
+```bash
+git clone https://github.com/anushka11p/fluxledger.git
+```
 
-   ```bash
-   git clone https://github.com/anushka11p/fluxledger.git
-   ```
+Open in Android Studio, sync Gradle, and run. No API key or configuration is needed — the Frankfurter API is free and unauthenticated.
 
-2. Open the project in Android Studio
-3. Sync Gradle
-4. Run on an emulator or device
+To see the offline behaviour: add a transaction while online, force-stop the app, enable airplane mode, then relaunch and add another. Conversion still works from the cached rates.
 
 ---
 
 ## Roadmap
 
-**Completed**
-
-- [x] Project setup with Version Catalog
-- [x] Room database (Entity, DAO, Database)
-- [x] Domain models + UseCases
-- [x] Repository pattern
-- [x] Hilt dependency injection
-- [x] Transaction list screen
-- [x] Add transaction screen
-- [x] Basic navigation
-
-**In progress / planned**
-
-- [ ] Live currency conversion (Frankfurter API)
-- [ ] Dashboard with category breakdown
-- [ ] Edit transaction
-- [ ] Better empty states & polish
-- [ ] Unit tests
+- [x] Room database with Clean Architecture and Hilt
+- [x] Add, edit, and delete transactions
+- [x] Live currency conversion via the Frankfurter API
+- [x] Exchange rates persisted in Room for offline conversion
+- [x] Dashboard with monthly total and category breakdown (XML + ViewBinding)
+- [x] Unit tests for conversion and offline fallback
+- [ ] Settings screen for choosing the home currency
+- [ ] Lazy conversion for transactions saved before the first rate fetch
+- [ ] Date picker on the add/edit screen
+- [ ] Instrumented tests for the main user flows
 
 ---
 
