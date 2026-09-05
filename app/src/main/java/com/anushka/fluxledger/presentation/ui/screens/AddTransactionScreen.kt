@@ -23,6 +23,13 @@ fun AddTransactionScreen(
     var category by remember { mutableStateOf("Food") }
     var note by remember { mutableStateOf("") }
 
+    val isSaving by viewModel.isSaving.collectAsState()
+    val saved by viewModel.saved.collectAsState()
+
+    LaunchedEffect(saved) {
+        if (saved) onBack()
+    }
+
     val currencies = listOf("INR", "USD", "EUR", "GBP")
     val categories = listOf("Food", "Transport", "Shopping", "Bills", "Other")
 
@@ -32,7 +39,10 @@ fun AddTransactionScreen(
                 title = { Text("Add Transaction") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
@@ -53,7 +63,6 @@ fun AddTransactionScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Currency dropdown
             var currencyExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = currencyExpanded,
@@ -64,7 +73,9 @@ fun AddTransactionScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Currency") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
+                    },
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
@@ -85,7 +96,6 @@ fun AddTransactionScreen(
                 }
             }
 
-            // Category dropdown
             var categoryExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = categoryExpanded,
@@ -96,7 +106,9 @@ fun AddTransactionScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                    },
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
@@ -135,12 +147,12 @@ fun AddTransactionScreen(
                             note = note.ifBlank { null },
                             date = System.currentTimeMillis()
                         )
-                        onBack()
                     }
                 },
+                enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save Transaction")
+                Text(if (isSaving) "Saving..." else "Save Transaction")
             }
         }
     }
