@@ -82,7 +82,7 @@ fun TransactionItem(
         ) {
             Column {
                 Text(
-                    text = "${transaction.amount} ${transaction.currency}",
+                    text = "${transaction.amount} ${transaction.currency}  →  ${"%.2f".format(transaction.baseAmount)} base",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
