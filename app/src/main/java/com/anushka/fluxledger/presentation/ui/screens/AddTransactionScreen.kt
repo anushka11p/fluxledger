@@ -16,12 +16,28 @@ import com.anushka.fluxledger.presentation.viewmodel.AddTransactionViewModel
 @Composable
 fun AddTransactionScreen(
     onBack: () -> Unit,
+    transactionId: String? = null,
     viewModel: AddTransactionViewModel = hiltViewModel()
 ) {
+    val existing by viewModel.existing.collectAsState()
+
+    LaunchedEffect(transactionId) {
+        if (transactionId != null) viewModel.load(transactionId)
+    }
+
     var amount by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf("INR") }
     var category by remember { mutableStateOf("Food") }
     var note by remember { mutableStateOf("") }
+
+    LaunchedEffect(existing) {
+        existing?.let {
+            amount = it.amount.toString()
+            currency = it.currency
+            category = it.category
+            note = it.note.orEmpty()
+        }
+    }
 
     val isSaving by viewModel.isSaving.collectAsState()
     val saved by viewModel.saved.collectAsState()
@@ -36,7 +52,9 @@ fun AddTransactionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Transaction") },
+                title = {
+                    Text(if (transactionId == null) "Add Transaction" else "Edit Transaction")
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -140,19 +158,25 @@ fun AddTransactionScreen(
                 onClick = {
                     val amountValue = amount.toDoubleOrNull()
                     if (amountValue != null && amountValue > 0) {
-                        viewModel.addTransaction(
+                        viewModel.save(
                             amount = amountValue,
                             currency = currency,
                             category = category,
                             note = note.ifBlank { null },
-                            date = System.currentTimeMillis()
+                            date = existing?.date ?: System.currentTimeMillis()
                         )
                     }
                 },
                 enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isSaving) "Saving..." else "Save Transaction")
+                Text(
+                    when {
+                        isSaving -> "Saving..."
+                        transactionId == null -> "Save Transaction"
+                        else -> "Update Transaction"
+                    }
+                )
             }
         }
     }

@@ -29,6 +29,11 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override suspend fun deleteTransaction(transaction: Transaction) {
         dao.delete(transaction.toEntity())
+
+    }
+
+    override suspend fun getTransactionById(id: String): Transaction? {
+        return dao.getById(id)?.toDomain()
     }
 
     override fun getTransactionsSince(startDate: Long): Flow<List<Transaction>> {
