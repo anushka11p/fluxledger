@@ -15,9 +15,16 @@ Built as a portfolio project to practise Clean Architecture, offline-first data 
 
 ## Screenshots
 
-| Transactions | Add / Edit | Dashboard |
-|---|---|---|
-| ![Transaction list](screenshots/list.png) | ![Add transaction](screenshots/add.png) | ![Dashboard](screenshots/dashboard.png) |
+**Transactions:-**
+<img width="207" height="446" alt="Screenshot 2026-09-05 at 10 51 55 PM" src="https://github.com/user-attachments/assets/983db04b-ea6c-4ffa-bfb7-f2057815f8cd" />
+
+**Edit dashboard:-**
+<img width="207" height="446" alt="image" src="https://github.com/user-attachments/assets/5a059ad2-5c43-484f-ac21-9796fc9367c9" />
+
+**Dashboard:-**
+<img width="207" height="446" alt="Screenshot 2026-09-05 at 10 52 38 PM" src="https://github.com/user-attachments/assets/f81e6a8f-803b-49c3-8079-e6f67f1aa6ab" />
+
+
 
 ---
 
